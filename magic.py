@@ -7,7 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/1kwZNGSFC-GIC1d0JG5_N4UFKm8XB8Iek
 """
 
-import tensorflow as ts
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -90,4 +89,101 @@ lg_model = LogisticRegression()
 lg_model = lg_model.fit(x_train, y_train)
 
 y_pred = lg_model.predict(x_test)
+print(classification_report(y_test, y_pred))
+
+"""# Support Vector Machine (SVM)"""
+
+from sklearn.svm import SVC
+
+svm_model = SVC()
+svm_model = svm_model.fit(x_train, y_train)
+
+y_pred = svm_model.predict(x_test)
+print(classification_report(y_test, y_pred))
+
+"""# Neural NetWork"""
+
+import tensorflow as tf
+
+def plot_history(history):
+  fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 8))
+  ax1.plot(history.history["loss"], label="loss")
+  ax1.plot(history.history["val_loss"], label="val_loss")
+  ax1.set_xlabel("Epoch")
+  ax1.set_ylabel("Binary Crossentropy")
+  plt.grid(True)
+
+  ax2.plot(history.history["accuracy"], label="accuracy")
+  ax2.plot(history.history["val_accuracy"], label="val_accuracy")
+  ax2.set_xlabel("Epoch")
+  ax2.set_ylabel("Accuracy")
+  ax2.grid(True)
+
+  plt.show()
+
+def train_model(x_train, y_train, nodes, dropout_prob, lr, batch, epochs):
+  nn_model = tf.keras.Sequential([
+      tf.keras.layers.Dense(nodes, activation='relu', input_shape=(10,)), # layers of neurons (dense each connect with all the next neurons), number, type of activation function, first need input shape.
+      tf.keras.layers.Dropout(dropout_prob), #pick random nodes and dont train them prevent overfit
+      tf.keras.layers.Dense(nodes, activation='relu'),
+      tf.keras.layers.Dropout(dropout_prob),
+      tf.keras.layers.Dense(1, activation='sigmoid')
+  ])
+
+  nn_model.compile(optimizer=tf.keras.optimizers.Adam(lr), loss="binary_crossentropy", metrics=['accuracy']) #default learning rate (0.001)
+  history = nn_model.fit(x_train, y_train, epochs=epochs, batch_size=batch, validation_split=0.2, verbose=0) #epochs = runs, batch size = number of samples, validation = tensorflow validates during training verbose = no written output.
+  return nn_model, history
+
+least_val_loss = float('inf')
+most_val_acc = float('inf')
+least_loss_model = None
+most_val_model = None
+epochs=100
+for nodes in [32, 64]:
+  for dropout_prob in [0, 0.2]:
+    for lr in [0.01, 0.005, 0.001]:
+      for batch in [32, 64, 128]:
+        print(f"{nodes} nodes, dropout {dropout_prob}, lr {lr}, batch size {batch}, ")
+        model, history = train_model(x_train, y_train, nodes, dropout_prob, lr, batch, epochs)
+        #plot_history(history)
+        val_accuracy = model.evaluate(x_valid, y_valid)[1]
+        val_loss = model.evaluate(x_valid, y_valid)[0]
+        if val_loss < least_val_loss:
+          least_val_loss = val_loss
+          least_loss_model = model
+        if val_accuracy > most_val_acc:
+          most_val_acc = val_accuracy
+          most_val_model = model
+
+y_pred = least_loss_model.predict(x_test)
+print(most_val_model, most_val_acc)
+y_pred = (y_pred > 0.5).astype(int).reshape(-1,)
+#y_pred_acc = (y_pred_acc > 0.5).astype(int).reshape(-1,)
+
+print(classification_report(y_test, y_pred))
+
+l_val_loss = float('inf')
+m_val_acc = float(0)
+loss_model = None
+acc_model = None
+epochs = 5000
+dropout_prob = 0.0
+lr = 0.011
+batch = 128
+nodes = 128
+model2, history2 = train_model(x_train, y_train, nodes, dropout_prob, lr, batch, epochs)
+        #plot_history(history)
+val_accuracy = model2.evaluate(x_valid, y_valid)[1]
+val_loss = model2.evaluate(x_valid, y_valid)[0]
+if val_loss < l_val_loss:
+  l_val_loss = val_loss
+  loss_model = model2
+if val_accuracy > m_val_acc:
+  m_val_acc = val_accuracy
+  acc_model = model2
+
+print(m_val_acc, acc_model, loss_model)
+
+y_pred = acc_model.predict(x_test)
+y_pred = (y_pred > 0.5).astype(int).reshape(-1,)
 print(classification_report(y_test, y_pred))
